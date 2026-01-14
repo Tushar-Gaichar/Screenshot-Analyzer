@@ -48,7 +48,7 @@ export default function ScreenshotAnalyzer() {
     formData.append('file', file);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/analyze", { method: 'POST', body: formData });
+      const response = await fetch("https://screenshot-analyzer-mdpu.onrender.com/analyze", { method: 'POST', body: formData });
       if (!response.ok) throw new Error('Server unreachable');
       const data = await response.json();
       setResult(data);
