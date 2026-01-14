@@ -1,0 +1,2 @@
+# Screenshot Analyzer
+Screenshot Analyzer is a web app that extracts structured information from UI screenshots using OCR and lightweight computer vision. Users can upload any screen capture (e.g., app interface, website, or product page), and the system automatically identifies elements such as titles, labels, prices, and buttons. The goal is to make screenshots machine-readable by turning pixels into structured JSON that can be used for UI understanding, product extraction, accessibility analysis, and downstream automation.
