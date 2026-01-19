@@ -1,10 +1,8 @@
 services:
   - type: web
-    name: screenshot-analyzer-backend
+    name: screenshot-analyzer
     env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port 10000
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.13
+    buildCommand: |
+      apt-get update && apt-get install -y tesseract-ocr
+      pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
