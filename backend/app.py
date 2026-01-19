@@ -1,66 +1,57 @@
 from fastapi import FastAPI, UploadFile, File
-import uvicorn
-import numpy as np
-import easyocr
-from PIL import Image
-import io
 from fastapi.middleware.cors import CORSMiddleware
-
+from PIL import Image
+import pytesseract
+import io
 
 app = FastAPI()
 
-ocr = easyocr.Reader(['en'])
-
+# CORS (so Netlify can talk to Render)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def to_python(v):
-    if isinstance(v, (np.integer,)):
-        return int(v)
-    if isinstance(v, (np.floating,)):
-        return float(v)
-    if isinstance(v, np.ndarray):
-        return v.tolist()
-    return v
-
-def convert(obj):
-    if isinstance(obj, (np.integer,)):
-        return int(obj)
-    if isinstance(obj, (np.floating,)):
-        return float(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, (list, tuple)):
-        return [convert(i) for i in obj]
-    if isinstance(obj, dict):
-        return {k: convert(v) for k, v in obj.items()}
-    return obj
-
+def categorize(text):
+    text = text.lower()
+    if any(x in text for x in ["$", "rs", "₹", "price", ".00"]):
+        return "price"
+    if any(x in text for x in ["login", "signup", "ok", "submit", "continue"]):
+        return "button"
+    if len(text.split()) <= 2:
+        return "label"
+    return "text"
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    image_bytes = await file.read()
-    img = Image.open(io.BytesIO(image_bytes))
+    img_bytes = await file.read()
+    img = Image.open(io.BytesIO(img_bytes))
 
-    result = ocr.readtext(np.array(img))
+    raw_text = pytesseract.image_to_string(img, lang="eng")
+
+    lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
 
     blocks = []
-    for bbox, text, conf in result:
+    for line in lines:
+        cat = categorize(line)
         blocks.append({
-            "bbox": bbox,
-            "text": text,
-            "confidence": conf,
+            "text": line,
+            "category": cat
         })
 
     structured = {
-        "status": "success",
-        "title": blocks[0]["text"] if blocks else "",
-        "blocks": blocks,
+        "title": lines[0] if lines else "",
+        "labels": [b for b in blocks if b["category"] == "label"],
+        "prices": [b for b in blocks if b["category"] == "price"],
+        "buttons": [b for b in blocks if b["category"] == "button"],
+        "raw": blocks
     }
 
-    return convert(structured)
+    return {"status": "success", "structured": structured}
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
